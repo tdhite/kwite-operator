@@ -1,0 +1,17 @@
+apiVersion: web.kwite.site/v1beta1
+kind: Kwite
+metadata:
+  name: kwite-2
+spec:
+  url: "/kwite"
+  port: 8081
+  image: "concourse.corp.local/kwite:latest"
+  targetcpu: 50
+  minreplicas: 1
+  maxreplicas: 10
+  ready: "OK!"
+  alive: "OK!"
+  template: |
+    --------------------------
+    this is the second kwite
+    --------------------------

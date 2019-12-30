@@ -1,0 +1,27 @@
+# static.yaml
+#
+# Copyright (c) 2019-2020 VMware, Inc.
+#
+# SPDX-License-Identifier: https://spdx.org/licenses/MIT.html
+#
+
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: ((taskimage))
+    tag: ((taskimagetag))
+    ca_certs:
+    - domain: ((task_cn))
+      cert: |
+        ((task_ca))
+
+inputs:
+  - name: sources
+
+outputs:
+  - name: go-error-files
+
+run:
+  path: sources/ci/scripts/static.sh

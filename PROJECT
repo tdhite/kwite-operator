@@ -1,0 +1,7 @@
+domain: kwite.site
+repo: github.com/tdhite/kwite-operator
+resources:
+- group: web
+  kind: Kwite
+  version: v1beta1
+version: "2"

@@ -1,0 +1,55 @@
+# kwite-operator params.yml
+#
+# Copyright (c) 2019-2020 VMware, Inc.
+#
+# SPDX-License-Identifier: https://spdx.org/licenses/MIT.html
+#
+
+docker-registry-repo: "mydockerrepo/kwite-op"
+docker-registry-email: "myemail@someserver.com"
+docker-registry-user: "mydockerhubuser"
+docker-registry-passwd: "mydockerhubpassword"
+
+# This is the git repo that will be used by the pipeline for bumping the
+# container semantic version on a per build basis.
+semver-git-repo: "git@github.com:mygithubid/semvers"
+semver-git-repo-branch: "master"
+semver-file: "kwite-op"
+
+# This is the git repo that contains the kwite source code.
+kwite-op-git-repo: "git@github.com/mygithubid/kwite"
+kwite-op-git-repo-branch: "master"
+k8s-namespace: "kwiteop-system"
+
+# This is the deployment environment -- this is fed to kustomize when building
+# the manifests for kubectl apply.
+deployenv: "dev"
+
+# The next two params are the image to use for Concourse
+# tasks, i.e., the image_resource container image.
+taskimage: "concourse.corp.local/golang"
+taskimagetag: "latest"
+
+# This is a .ssh private key used for accessing the
+# various git repos (kwite and semvers)
+private-git-repo-key: |
+  -----BEGIN RSA PRIVATE KEY-----
+  all your private key data here
+  -----END RSA PRIVATE KEY-----
+# This is the CA for use by Docker when
+# pulling Docker images, such as from local,
+# private registries that are using locally
+# generated PKI certs.
+task_cn: concourse.corp.local
+task_ca: |
+  -----BEGIN CERTIFICATE-----
+  put any certificate authorities (ca.crt)
+  Concourse would not know such as those
+  created with easy-rsa for use with local,
+  private Docker registries.
+  -----END CERTIFICATE-----
+
+# This is the end of hand-tuned variables. After setting up those above,
+# run append-creds-to-params.sh, which will attempt to append kubernetes auth
+# variables the pipeline tasks need.
+

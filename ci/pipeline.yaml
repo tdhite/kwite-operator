@@ -1,0 +1,138 @@
+# pipeline.yaml
+#
+# Copyright (c) 2019-2020 VMware, Inc.
+#
+# SPDX-License-Identifier: https://spdx.org/licenses/MIT.html
+#
+# Note: This pipline assumes a private insecure docker registry
+#
+
+resources:
+  - name: version
+    type: semver
+    source:
+      driver: git
+      uri: ((semver-git-repo))
+      branch: ((semver-git-repo-branch))
+      file: ((semver-file))
+      private_key: ((private-git-repo-key))
+
+  - name: sources
+    type: git
+    source:
+      uri: ((kwite-op-git-repo))
+      branch: ((kwite-op-git-repo-branch))
+      private_key: ((private-git-repo-key))
+
+  - name: image
+    type: docker-image
+    source:
+      repository: ((docker-registry-repo))
+      insecure_registries: [ "concourse.corp.local" ]
+
+jobs:
+  - name: code-tests
+    plan:
+      - get: sources
+        trigger: true
+      - task: static-tests
+        file: sources/ci/tasks/static.yaml
+        vars:
+          taskimage: ((taskimage))
+          taskimagetag: ((taskimagetag))
+          task_cn: ((task_cn))
+          task_ca: ((task_ca))
+      - task: unit-tests
+        file: sources/ci/tasks/unit.yaml
+        vars:
+          taskimage: ((taskimage))
+          taskimagetag: ((taskimagetag))
+          task_cn: ((task_cn))
+          task_ca: ((task_ca))
+
+  - name: increment-version
+    serial_groups:
+      - version
+    plan:
+      - get: sources
+        passed: [code-tests]
+        trigger: true
+      - get: version
+        params:
+          bump: patch
+      - put: version
+        params:
+          bump: patch
+
+  - name: build-container
+    serial_groups:
+      - version
+    plan:
+      - get: sources
+        passed: [code-tests]
+        trigger: true
+      - get: version
+        passed: [increment-version]
+      - task: task-build
+        file: sources/ci/tasks/build.yaml
+        vars:
+          taskimage: ((taskimage))
+          taskimagetag: ((taskimagetag))
+          task_cn: ((task_cn))
+          task_ca: ((task_ca))
+        params:
+          github_private_repo: ((github_private_repo))
+          github_private_api_key: ((github_private_api_key))
+          github_private_repo_user: ((github_private_repo_user))
+      - task: container
+        file: sources/ci/tasks/container.yaml
+        vars:
+          taskimage: ((taskimage))
+          taskimagetag: ((taskimagetag))
+          task_cn: ((task_cn))
+          task_ca: ((task_ca))
+      - put: image
+        params:
+          build: container
+          tag: version/number
+          tag_as_latest: true
+          skip_download: true
+
+  - name: deploy
+    serial_groups:
+      - version
+    plan:
+      - get: sources
+        passed: [build-container]
+        trigger: true
+      - get: version
+        passed: [increment-version]
+      - get: image
+        passed: [build-container]
+      - task: task-deployment-files
+        file: sources/ci/tasks/deployment-files.yaml
+        params:
+          container: ((docker-registry-repo))
+          github_private_repo: ((github_private_repo))
+          github_private_api_key: ((github_private_api_key))
+          github_private_repo_user: ((github_private_repo_user))
+        vars:
+          taskimage: ((taskimage))
+          taskimagetag: ((taskimagetag))
+          task_cn: ((task_cn))
+          task_ca: ((task_ca))
+      - task: kubernetes-deploy
+        file: sources/ci/tasks/kubernetes-deploy.yaml
+        params:
+          cluster_url: ((k8s-cluster-url))
+          namespace: ((k8s-namespace))
+          container: ((docker-registry-repo))
+          cluster_ca: ((k8s-cluster-ca))
+          admin_key: ((k8s-admin-key))
+          admin_cert: ((k8s-admin-cert))
+          deployenv: ((deployenv))
+        vars:
+          taskimage: ((taskimage))
+          taskimagetag: ((taskimagetag))
+          task_cn: ((task_cn))
+          task_ca: ((task_ca))
