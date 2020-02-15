@@ -93,6 +93,7 @@ securityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true
   runAsNonRoot: true
+  runAsUser: 65534
 ```
 
 For detailed information, see the [Kubernetes container security context

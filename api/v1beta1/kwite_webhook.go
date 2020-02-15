@@ -33,8 +33,6 @@ func (r *Kwite) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
 // +kubebuilder:webhook:path=/mutate-web-kwite-site-v1beta1-kwite,mutating=true,failurePolicy=fail,groups=web.kwite.site,resources=kwites,verbs=create;update,versions=v1beta1,name=mkwite.kb.io
 
 var _ webhook.Defaulter = &Kwite{}
@@ -83,15 +81,16 @@ func (r *Kwite) Default() {
 		nonRoot := true
 		readOnly := true
 		allowEscalate := false
+		var user int64 = 65534
 		r.Spec.SecurityContext = &corev1.SecurityContext{
 			RunAsNonRoot:             &nonRoot,
 			ReadOnlyRootFilesystem:   &readOnly,
 			AllowPrivilegeEscalation: &allowEscalate,
+			RunAsUser:                &user,
 		}
 	}
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 // +kubebuilder:webhook:verbs=create;update,path=/validate-web-kwite-site-v1beta1-kwite,mutating=false,failurePolicy=fail,groups=web.kwite.site,resources=kwites,versions=v1beta1,name=vkwite.kb.io
 
 var _ webhook.Validator = &Kwite{}
@@ -114,7 +113,6 @@ func (r *Kwite) ValidateUpdate(old runtime.Object) error {
 func (r *Kwite) ValidateDelete() error {
 	kwitelog.Info("validate delete", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }
 
