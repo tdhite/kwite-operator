@@ -80,10 +80,6 @@ jobs:
           taskimagetag: ((taskimagetag))
           task_cn: ((task_cn))
           task_ca: ((task_ca))
-        params:
-          github_private_repo: ((github_private_repo))
-          github_private_api_key: ((github_private_api_key))
-          github_private_repo_user: ((github_private_repo_user))
       - task: container
         file: sources/ci/tasks/container.yaml
         vars:
@@ -113,9 +109,6 @@ jobs:
         file: sources/ci/tasks/deployment-files.yaml
         params:
           container: ((docker-registry-repo))
-          github_private_repo: ((github_private_repo))
-          github_private_api_key: ((github_private_api_key))
-          github_private_repo_user: ((github_private_repo_user))
         vars:
           taskimage: ((taskimage))
           taskimagetag: ((taskimagetag))

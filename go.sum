@@ -216,6 +216,8 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/tdhite/kwite v0.0.0-20200215231531-43b44042cdde h1:J1nqPUJ75gjAR0R/+Rb7gBl1+LamGoDarBvSw43UEKs=
 github.com/tdhite/kwite v0.0.0-20200215231531-43b44042cdde/go.mod h1:qP8Se/Kbi+/80v7RvAWEWU2+UkuPiBCGcNdwfO/6BH8=
+github.com/tdhite/kwite v0.2.0 h1:HrQjIhvt8W/o2clYiy82ChIv767r6NrrMOD4Am1tgLE=
+github.com/tdhite/kwite v0.2.0/go.mod h1:qP8Se/Kbi+/80v7RvAWEWU2+UkuPiBCGcNdwfO/6BH8=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
