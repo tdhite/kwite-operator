@@ -11,7 +11,8 @@ set -x
 # Save current directory
 TOP="$(pwd)"
 echo "PATH: ${PATH}"
-export PATH=${PATH:/usr/local/bin}
+PATH=${PATH:/usr/local/bin}
+export PATH=${PATH}:${TOP}
 
 # install kubectl
 EXE=$(which kubectl)
@@ -29,7 +30,6 @@ if [ $? -ne 0 ]; then
     fi
     chmod +x kubectl
 fi
-export PATH=${PATH}:${TOP}
 
 # get the tag for the docker container
 tag=$(cat version/version)

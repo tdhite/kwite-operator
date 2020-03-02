@@ -102,10 +102,10 @@ jobs:
         file: sources/ci/tasks/deployment-files.yaml
         params:
           container: ((docker-registry-repo))
+          deployenv: ((deployenv))
         vars:
           taskimage: ((taskimage))
           taskimagetag: ((taskimagetag))
-          deployenv: ((deployenv))
       - task: kubernetes-deploy
         file: sources/ci/tasks/kubernetes-deploy.yaml
         params:

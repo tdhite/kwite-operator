@@ -14,6 +14,8 @@ set
 # Save current directory
 TOP="$(pwd)"
 OUTPUT=${TOP}/kubernetes
+PATH=${PATH:/usr/local/bin}
+export PATH=${PATH}:${TOP}
 
 ret=0
 if [ -z "${container}" ]; then
@@ -33,9 +35,29 @@ tag="$(cat version/version)"
 # Assure the output area exists
 mkdir -p ${OUTPUT}
 
+# install kubectl
+set +e
+which kubectl
+ret=$?
+set -e
+if [ $ret -ne 0 ]; then
+    LATEST="$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)"
+    if [ $? -ne 0 ]; then
+        echo "Failed to obtain latest kubectl release. Aborting!"
+        exit 1
+    fi
+
+    curl -LO https://storage.googleapis.com/kubernetes-release/release/${LATEST}/bin/linux/amd64/kubectl
+    if [ $? -ne 0 ]; then
+        echo "Failed to download kubectl. Aborting!"
+        exit 1
+    fi
+    chmod +x kubectl
+fi
+
 # install kustomize
 set +e
-EXE=$(which kustomize)
+which kustomize
 ret=$?
 set -e
 if [ $ret -ne 0 ]; then
@@ -53,7 +75,6 @@ if [ $ret -ne 0 ]; then
     tar xzf ./kustomize_v*_${opsys}_amd64.tar.gz
     chmod +x kustomize
 fi
-export PATH=${PATH}:${TOP}
 
 # prepare for private repos
 . ${TOP}/sources/ci/scripts/setup_private_repo.sh
@@ -61,7 +82,7 @@ export PATH=${PATH}:${TOP}
 # create the kubernetes deployment manifest
 cd ${TOP}/sources && make manifests
 cd ${TOP}/sources/config/manager && kustomize edit set image controller=${container}:${tag}
-cd ${TOP}/sources && kustomize build config/${deployenv} >${OUTPUT}/kwite-op.yaml
+cd ${TOP}/sources && kubectl kustomize config/${deployenv} >${OUTPUT}/kwite-op.yaml
 
 # Check what's here
 echo "List out the output directory:"
