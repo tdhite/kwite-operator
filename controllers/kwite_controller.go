@@ -147,6 +147,17 @@ func (r *KwiteReconciler) getDeployment(req ctrl.Request, log logr.Logger) (*app
 	lbls := getLabelSelector(req)
 	matchLabels := metav1.LabelSelector{MatchLabels: getLabelSelector(req)}
 
+	var ips []corev1.LocalObjectReference = nil
+	if len(r.kwite.Spec.ImagePullSecrets) > 0 {
+		ips = make([]corev1.LocalObjectReference, 0)
+		for _, s := range r.kwite.Spec.ImagePullSecrets {
+			lor := corev1.LocalObjectReference{
+				Name: s,
+			}
+			ips = append(ips, lor)
+		}
+	}
+
 	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      req.Name,
@@ -232,10 +243,12 @@ func (r *KwiteReconciler) getDeployment(req ctrl.Request, log logr.Logger) (*app
 							},
 						},
 					},
+					ImagePullSecrets: ips,
 				},
 			},
 		},
 	}
+
 	if err := ctrl.SetControllerReference(r.kwite, d, r.Scheme); err != nil {
 		log.Error(err, "Could not set kwite as owner of Deployment: "+req.Name)
 		return nil, err

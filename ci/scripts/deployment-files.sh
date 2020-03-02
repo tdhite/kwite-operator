@@ -20,6 +20,10 @@ if [ -z "${container}" ]; then
     echo "ERROR: container not supplied. Aborting!"
     ret=1
 fi
+if [ -z "${deployenv}" ]; then
+    echo "ERROR: deploy (kustomize) environmnt not supplied. Aborting!"
+    ret=1
+fi
 if [ $ret -ne 0 ]; then
     exit $ret
 fi
@@ -57,7 +61,7 @@ export PATH=${PATH}:${TOP}
 # create the kubernetes deployment manifest
 cd ${TOP}/sources && make manifests
 cd ${TOP}/sources/config/manager && kustomize edit set image controller=${container}:${tag}
-cd ${TOP}/sources && kustomize build config/default >${OUTPUT}/kwite-op.yaml
+cd ${TOP}/sources && kustomize build config/${deployenv} >${OUTPUT}/kwite-op.yaml
 
 # Check what's here
 echo "List out the output directory:"

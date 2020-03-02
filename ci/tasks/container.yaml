@@ -12,10 +12,6 @@ image_resource:
   source:
     repository: ((taskimage))
     tag: ((taskimagetag))
-    ca_certs:
-    - domain: ((task_cn))
-      cert: |
-        ((task_ca))
 
 inputs:
   - name: sources

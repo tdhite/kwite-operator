@@ -46,6 +46,11 @@ spec:
                 description: container image to use for the http(s) server, default
                   is kwite:latest
                 type: string
+              imagePullSecrets:
+                description: Image pull secrets name for container pulls.
+                items:
+                  type: string
+                type: array
               maxreplicas:
                 description: The maximum number of page hander replicas, default is
                   1 (one)

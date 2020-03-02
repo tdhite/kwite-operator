@@ -63,11 +63,6 @@ if [ -z "${admin_token}" ]; then
         ret=1
     fi
 fi
-if [ -z "${deployenv}" ]; then
-
-    echo "ERROR: deploy (kustomize) environmnt not supplied. Aborting!"
-    ret=1
-fi
 if [ -z "${tag}" ]; then
     echo "ERROR: tag (version) not supplied. Aborting!"
     ret=1

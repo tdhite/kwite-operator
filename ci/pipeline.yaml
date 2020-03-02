@@ -28,7 +28,8 @@ resources:
     type: docker-image
     source:
       repository: ((docker-registry-repo))
-      insecure_registries: [ "concourse.corp.local" ]
+      username: ((docker-registry-user))
+      password: ((docker-registry-passwd))
 
 jobs:
   - name: code-tests
@@ -40,15 +41,11 @@ jobs:
         vars:
           taskimage: ((taskimage))
           taskimagetag: ((taskimagetag))
-          task_cn: ((task_cn))
-          task_ca: ((task_ca))
       - task: unit-tests
         file: sources/ci/tasks/unit.yaml
         vars:
           taskimage: ((taskimage))
           taskimagetag: ((taskimagetag))
-          task_cn: ((task_cn))
-          task_ca: ((task_ca))
 
   - name: increment-version
     serial_groups:
@@ -78,15 +75,11 @@ jobs:
         vars:
           taskimage: ((taskimage))
           taskimagetag: ((taskimagetag))
-          task_cn: ((task_cn))
-          task_ca: ((task_ca))
       - task: container
         file: sources/ci/tasks/container.yaml
         vars:
           taskimage: ((taskimage))
           taskimagetag: ((taskimagetag))
-          task_cn: ((task_cn))
-          task_ca: ((task_ca))
       - put: image
         params:
           build: container
@@ -112,8 +105,7 @@ jobs:
         vars:
           taskimage: ((taskimage))
           taskimagetag: ((taskimagetag))
-          task_cn: ((task_cn))
-          task_ca: ((task_ca))
+          deployenv: ((deployenv))
       - task: kubernetes-deploy
         file: sources/ci/tasks/kubernetes-deploy.yaml
         params:
@@ -123,9 +115,6 @@ jobs:
           cluster_ca: ((k8s-cluster-ca))
           admin_key: ((k8s-admin-key))
           admin_cert: ((k8s-admin-cert))
-          deployenv: ((deployenv))
         vars:
           taskimage: ((taskimage))
           taskimagetag: ((taskimagetag))
-          task_cn: ((task_cn))
-          task_ca: ((task_ca))

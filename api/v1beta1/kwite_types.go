@@ -64,6 +64,10 @@ type KwiteSpec struct {
 	// +optional
 	TargetCpu int `json:"targetcpu,omitempty"`
 
+	// Image pull secrets name for container pulls.
+	// +optional
+	ImagePullSecrets []string `json:"imagePullSecrets"`
+
 	// The security context for kwite instance Pods, default is no specified context
 	// +optional
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
