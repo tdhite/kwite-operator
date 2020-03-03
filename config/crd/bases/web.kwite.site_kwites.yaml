@@ -49,7 +49,14 @@ spec:
               imagePullSecrets:
                 description: Image pull secrets name for container pulls.
                 items:
-                  type: string
+                  description: LocalObjectReference contains enough information to
+                    let you locate the referenced object inside the same namespace.
+                  properties:
+                    name:
+                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        TODO: Add other useful fields. apiVersion, kind, uid?'
+                      type: string
+                  type: object
                 type: array
               maxreplicas:
                 description: The maximum number of page hander replicas, default is
@@ -224,18 +231,23 @@ spec:
               address:
                 description: The service address on which the URL is exposed
                 type: string
-              minreplicas:
-                description: The minimum number of page hander replicas
+              desiredReplicas:
+                description: The total number of replicas HPA is requesting
                 type: integer
-              port:
-                description: The service Port on which the URL is exposed
+              ready:
+                description: True if the minimum number of replicas are ready
+                type: boolean
+              readyReplicas:
+                description: The number of ready replicas HPA is requesting
                 type: integer
             required:
-            - minreplicas
+            - ready
             type: object
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""

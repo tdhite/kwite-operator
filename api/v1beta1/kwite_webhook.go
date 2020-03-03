@@ -33,7 +33,7 @@ func (r *Kwite) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:path=/mutate-web-kwite-site-v1beta1-kwite,mutating=true,failurePolicy=fail,groups=web.kwite.site,resources=kwites,verbs=create;update,versions=v1beta1,name=mkwite.kb.io
+// +kubebuilder:webhook:path=/mutate-web-kwite-site-v1beta1-kwite,mutating=true,failurePolicy=fail,groups=web.kwite.site,resources=kwites,verbs=create;update,versions=v1beta1,name=mkwite.kwite.site
 
 var _ webhook.Defaulter = &Kwite{}
 
@@ -77,6 +77,10 @@ func (r *Kwite) Default() {
 		r.Spec.TargetCpu = 80
 	}
 
+	if r.Spec.ImagePullSecrets == nil {
+		r.Spec.ImagePullSecrets = []corev1.LocalObjectReference{}
+	}
+
 	if r.Spec.SecurityContext == nil {
 		nonRoot := true
 		readOnly := true
@@ -91,7 +95,7 @@ func (r *Kwite) Default() {
 	}
 }
 
-// +kubebuilder:webhook:verbs=create;update,path=/validate-web-kwite-site-v1beta1-kwite,mutating=false,failurePolicy=fail,groups=web.kwite.site,resources=kwites,versions=v1beta1,name=vkwite.kb.io
+// +kubebuilder:webhook:verbs=create;update,path=/validate-web-kwite-site-v1beta1-kwite,mutating=false,failurePolicy=fail,groups=web.kwite.site,resources=kwites,versions=v1beta1,name=vkwite.kwite.site
 
 var _ webhook.Validator = &Kwite{}
 

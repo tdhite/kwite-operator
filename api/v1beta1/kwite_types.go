@@ -66,7 +66,7 @@ type KwiteSpec struct {
 
 	// Image pull secrets name for container pulls.
 	// +optional
-	ImagePullSecrets []string `json:"imagePullSecrets"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets"`
 
 	// The security context for kwite instance Pods, default is no specified context
 	// +optional
@@ -96,14 +96,18 @@ type KwiteStatus struct {
 	// The service address on which the URL is exposed
 	Address string `json:"address,omitempty"`
 
-	// The service Port on which the URL is exposed
-	Port int `json:"port,omitempty"`
+	// The number of ready replicas HPA is requesting
+	ReadyReplicas int `json:"readyReplicas,omitempty"`
 
-	// The minimum number of page hander replicas
-	CurrentReplicas int `json:"minreplicas"`
+	// The total number of replicas HPA is requesting
+	DesiredReplicas int `json:"desiredReplicas,omitempty"`
+
+	// True if the minimum number of replicas are ready
+	Ready bool `json:"ready"`
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // Kwite is the Schema for the kwites API
 type Kwite struct {

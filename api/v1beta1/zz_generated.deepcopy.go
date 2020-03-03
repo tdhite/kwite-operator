@@ -84,7 +84,7 @@ func (in *KwiteSpec) DeepCopyInto(out *KwiteSpec) {
 	}
 	if in.ImagePullSecrets != nil {
 		in, out := &in.ImagePullSecrets, &out.ImagePullSecrets
-		*out = make([]string, len(*in))
+		*out = make([]v1.LocalObjectReference, len(*in))
 		copy(*out, *in)
 	}
 	if in.SecurityContext != nil {
