@@ -3,14 +3,14 @@ kind: Kwite
 metadata:
   name: kwite-2
 spec:
-  url: "/kwite"
+  url: /kwite
   port: 8081
-  image: "registry.hub.docker.com/tdhite/kwite:latest"
+  image: registry.hub.docker.com/tdhite/kwite:0.0.58
   targetcpu: 50
   minreplicas: 1
   maxreplicas: 10
-  ready: "OK!"
-  alive: "OK!"
+  ready: OK!
+  alive: OK!
   template: |
     --------------------------
     this is the second kwite

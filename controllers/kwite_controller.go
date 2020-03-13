@@ -31,9 +31,10 @@ const (
 // KwiteReconciler reconciles a Kwite object
 type KwiteReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
-	kwite  *webv1beta1.Kwite
+	Log          logr.Logger
+	reconcileLog logr.Logger
+	Scheme       *runtime.Scheme
+	kwite        *webv1beta1.Kwite
 }
 
 func getLabelSelector(req ctrl.Request) map[string]string {
@@ -51,7 +52,7 @@ func getLabelSelector(req ctrl.Request) map[string]string {
 
 func (r *KwiteReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues(kwiteName, req.NamespacedName)
+	r.reconcileLog = r.Log.WithValues(kwiteName, req.NamespacedName)
 	res := ctrl.Result{}
 
 	// load the kwite object
@@ -62,7 +63,7 @@ func (r *KwiteReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return res, client.IgnoreNotFound(err)
 		} else {
 			// some real error occurred
-			log.Error(err, "Unable to fetch kwite")
+			r.reconcileLog.Error(err, "Unable to fetch kwite")
 			return res, err
 		}
 	}
@@ -71,46 +72,45 @@ func (r *KwiteReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	r.kwite = &kwite
 
 	// get current status and setup to apply kwite url rewrites where appropriate
-	update := r.updateDeploymentStatus(ctx, req, log) || r.updateHPAStatus(ctx, req, log)
-	updateUrls := r.updateServiceStatus(ctx, req, log)
+	update := r.updateDeploymentStatus(ctx, req) || r.updateHPAStatus(ctx, req)
+	updateUrls := r.updateServiceStatus(ctx, req)
 	update = update || updateUrls
 
 	if update {
 		if err := r.Status().Update(ctx, &kwite); err != nil {
-			log.Error(err, "Unable to update Kwite status")
+			r.reconcileLog.Error(err, "Unable to update Kwite status")
 			return ctrl.Result{}, err
 		}
 	}
 
 	// reconcile against the various objects
-	if err := r.reconcileDeployment(ctx, req, log); err != nil {
-		log.Error(err, "Failed to update Deployment for ", req.NamespacedName.String())
+	if err := r.reconcileDeployment(ctx, req); err != nil {
+		r.reconcileLog.Error(err, "Failed to update Deployment for ", req.NamespacedName.String())
 	}
-	if err := r.reconcileService(ctx, req, log); err != nil {
-		log.Error(err, "Failed to update Service for ", req.NamespacedName.String())
+	if err := r.reconcileService(ctx, req); err != nil {
+		r.reconcileLog.Error(err, "Failed to update Service for ", req.NamespacedName.String())
 	}
-	if err := r.reconcileHPA(ctx, req, log); err != nil {
-		log.Error(err, "Failed to update HPA for ", req.NamespacedName.String())
+	if err := r.reconcileHPA(ctx, req); err != nil {
+		r.reconcileLog.Error(err, "Failed to update HPA for ", req.NamespacedName.String())
 	}
-	if err := r.reconcileConfigMap(ctx, req, updateUrls, log); err != nil {
-		log.Error(err, "Failed to update ConfigMap for ", req.NamespacedName.String())
+	if err := r.reconcileConfigMap(ctx, req, updateUrls); err != nil {
+		r.reconcileLog.Error(err, "Failed to update ConfigMap for ", req.NamespacedName.String())
 	}
 
 	return res, nil
 }
 
 func isOwnerKwite(rawObj runtime.Object) []string {
-	svc := rawObj.(*corev1.ConfigMap)
-	owner := metav1.GetControllerOf(svc)
+	cm := rawObj.(*corev1.ConfigMap)
+	owner := metav1.GetControllerOf(cm)
+
 	if owner == nil {
 		return nil
-	}
-
-	if owner.APIVersion != webv1beta1.GroupVersion.String() || owner.Kind != "Kwite" {
+	} else if owner.APIVersion == webv1beta1.GroupVersion.String() && owner.Kind == webv1beta1.ControllerName {
+		return []string{owner.Kind}
+	} else {
 		return nil
 	}
-
-	return []string{owner.Name}
 }
 
 func (r *KwiteReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -118,7 +118,7 @@ func (r *KwiteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	if err := mgr.GetFieldIndexer().IndexField(&corev1.ConfigMap{}, cmOwnerKey,
 		isOwnerKwite); err != nil {
-		r.Log.Error(err, "Aborting setup.")
+		r.reconcileLog.Error(err, "Aborting setup.")
 		return nil
 	}
 

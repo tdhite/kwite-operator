@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,7 +24,7 @@ import (
 )
 
 // Reconcile the Horizontal Pod Autoscaler cluster state.
-func (r *KwiteReconciler) getService(req ctrl.Request, log logr.Logger) (*corev1.Service, error) {
+func (r *KwiteReconciler) getService(req ctrl.Request) (*corev1.Service, error) {
 	s := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      req.Name,
@@ -48,7 +47,7 @@ func (r *KwiteReconciler) getService(req ctrl.Request, log logr.Logger) (*corev1
 	}
 
 	if err := ctrl.SetControllerReference(r.kwite, s, r.Scheme); err != nil {
-		log.Error(err, "Could not set kwite as owner of Service: ", req.Name)
+		r.reconcileLog.Error(err, "Could not set kwite as owner of Service: ", req.Name)
 		return nil, err
 	}
 
@@ -56,11 +55,11 @@ func (r *KwiteReconciler) getService(req ctrl.Request, log logr.Logger) (*corev1
 }
 
 // Determine and return the fqdn for the kwite
-func (r *KwiteReconciler) getKwiteFqdn(key string, svc *corev1.Service, log logr.Logger) string {
+func (r *KwiteReconciler) getKwiteFqdn(key string, svc *corev1.Service) string {
 	hn := key
 	ips, err := net.LookupIP(hn)
 	if err != nil {
-		log.Error(err, "Failed address lookup kwite hostname "+hn)
+		r.reconcileLog.Error(err, "Failed address lookup kwite hostname "+hn)
 		return hn
 	}
 
@@ -72,23 +71,23 @@ func (r *KwiteReconciler) getKwiteFqdn(key string, svc *corev1.Service, log logr
 
 		// marshal the ip address as string-able
 		if ipaddr, err := ip.MarshalText(); err != nil {
-			log.Error(err, "Failed to marshall kwite address to string-able type.")
+			r.reconcileLog.Error(err, "Failed to marshall kwite address to string-able type.")
 		} else {
 			s := string(ipaddr)
 			if hosts, err := net.LookupAddr(s); err != nil {
-				log.Error(err, "Failed to obtain fqdn for "+s)
+				r.reconcileLog.Error(err, "Failed to obtain fqdn for "+s)
 			} else {
 				// the first address is the fqdn; don't want the trailing dot
 				hn = ""
 				for _, h := range hosts {
-					log.Info("Found fqdn: " + h)
+					r.reconcileLog.Info("Found fqdn: " + h)
 					if len(h) > len(hn) {
 						hn = h
 					}
 				}
 				hn = strings.TrimSuffix(hn, ".")
 				hn = net.JoinHostPort(hn, strconv.Itoa(int(svc.Spec.Ports[0].Port)))
-				log.Info("Finalized on fqdn: " + hn)
+				r.reconcileLog.Info("Finalized on fqdn: " + hn)
 			}
 		}
 		break
@@ -104,21 +103,24 @@ func (r *KwiteReconciler) getServiceHostName(req ctrl.Request) string {
 	return fmt.Sprintf("%s.%s", req.Name, req.Namespace)
 }
 
-func (r *KwiteReconciler) updateServiceStatus(ctx context.Context, req ctrl.Request, log logr.Logger) bool {
+func (r *KwiteReconciler) updateServiceStatus(ctx context.Context, req ctrl.Request) bool {
 	svc := &corev1.Service{}
 	doUpdate := false
 
 	if err := r.Get(ctx, req.NamespacedName, svc); err != nil {
 		if apierrs.IsNotFound(err) {
-			log.Info("Service does not exist for status update in namespace: " + req.NamespacedName.String())
+			r.reconcileLog.Info("Service does not exist for status update in namespace: " + req.NamespacedName.String())
 		} else {
-			log.Error(err, "Failed Service retrieve for status update in namespace: "+req.NamespacedName.String())
+			r.reconcileLog.Error(err, "Failed Service retrieve for status update in namespace: "+req.NamespacedName.String())
 		}
 	} else {
-		newAddr := r.getKwiteFqdn(r.getServiceHostName(req), svc, log)
+		newAddr := r.getKwiteFqdn(r.getServiceHostName(req), svc)
 		if newAddr != r.kwite.Status.Address {
+			r.reconcileLog.Info("Service address changed, updates to Kwite rewrite rules necessary for " + req.NamespacedName.String())
 			r.kwite.Status.Address = newAddr
 			doUpdate = true
+		} else {
+			r.reconcileLog.Info("No Srvice address change, updates to Kwite rewrite rules unnecessary for " + req.NamespacedName.String())
 		}
 	}
 
@@ -126,23 +128,23 @@ func (r *KwiteReconciler) updateServiceStatus(ctx context.Context, req ctrl.Requ
 }
 
 // Reconcile the Service cluster state.
-func (r *KwiteReconciler) reconcileService(ctx context.Context, req ctrl.Request, log logr.Logger) error {
+func (r *KwiteReconciler) reconcileService(ctx context.Context, req ctrl.Request) error {
 	svc := &corev1.Service{}
 
 	if err := r.Get(ctx, req.NamespacedName, svc); err != nil {
 		if apierrs.IsNotFound(err) {
 			// Need to create the service since it's not there
-			svc, err = r.getService(req, log)
+			svc, err = r.getService(req)
 			if err != nil {
-				log.Error(err, "failed to create Service resource")
+				r.reconcileLog.Error(err, "failed to create Service resource")
 				return err
 			}
 			if err := r.Create(ctx, svc); err != nil {
-				log.Error(err, "failed to create Service on the cluster: ")
+				r.reconcileLog.Error(err, "failed to create Service on the cluster: ")
 				return err
 			}
 		} else {
-			log.Error(err, "unable to retrieve Service in namespace "+req.Namespace)
+			r.reconcileLog.Error(err, "unable to retrieve Service in namespace "+req.Namespace)
 			return err
 		}
 	}
@@ -165,10 +167,10 @@ func (r *KwiteReconciler) reconcileService(ctx context.Context, req ctrl.Request
 			doUpdate = true
 		}
 		if doUpdate {
-			log.Info("Updating Service " + svc.GetName())
+			r.reconcileLog.Info("Updating Service " + svc.GetName())
 			err := r.Update(ctx, svc)
 			if err != nil {
-				log.Error(err, "Failed to update Service.")
+				r.reconcileLog.Error(err, "Failed to update Service.")
 				return err
 			}
 		}

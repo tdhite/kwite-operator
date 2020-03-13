@@ -64,15 +64,15 @@ func main() {
 
 	if err = (&controllers.KwiteReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Kwite"),
+		Log:    ctrl.Log.WithName("controllers").WithName(webv1beta1.ControllerName),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Kwite")
+		setupLog.Error(err, "unable to create controller", "controller", webv1beta1.ControllerName)
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&webv1beta1.Kwite{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Kwite")
+			setupLog.Error(err, "unable to create webhook", "webhook", webv1beta1.ControllerName)
 			os.Exit(1)
 		}
 	}

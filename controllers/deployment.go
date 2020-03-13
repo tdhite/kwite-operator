@@ -12,7 +12,6 @@ import (
 	"context"
 	"path"
 
-	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,7 +28,7 @@ const (
 )
 
 // Create, initialize and return a new Deployent.
-func (r *KwiteReconciler) getDeployment(req ctrl.Request, log logr.Logger) (*appsv1.Deployment, error) {
+func (r *KwiteReconciler) getDeployment(req ctrl.Request) (*appsv1.Deployment, error) {
 	replicas := int32(r.kwite.Spec.MinReplicas)
 	lbls := getLabelSelector(req)
 	matchLabels := metav1.LabelSelector{MatchLabels: getLabelSelector(req)}
@@ -131,22 +130,22 @@ func (r *KwiteReconciler) getDeployment(req ctrl.Request, log logr.Logger) (*app
 	}
 
 	if err := ctrl.SetControllerReference(r.kwite, d, r.Scheme); err != nil {
-		log.Error(err, "Could not set kwite as owner of Deployment: "+req.Name)
+		r.reconcileLog.Error(err, "Could not set kwite as owner of Deployment: "+req.Name)
 		return nil, err
 	}
 	return d, nil
 }
 
-func (r *KwiteReconciler) updateDeploymentStatus(ctx context.Context, req ctrl.Request, log logr.Logger) bool {
+func (r *KwiteReconciler) updateDeploymentStatus(ctx context.Context, req ctrl.Request) bool {
 	dep := &appsv1.Deployment{}
 	doUpdate := false
 
 	if err := r.Get(ctx, req.NamespacedName, dep); err != nil {
 		// no matter the error, no status update
 		if apierrs.IsNotFound(err) {
-			log.Info("Deployment does not exist for status update in namespace: " + req.NamespacedName.String())
+			r.reconcileLog.Info("Deployment does not exist for status update in namespace: " + req.NamespacedName.String())
 		} else {
-			log.Error(err, "Failed Deployment retrieve for status update in namespace: "+req.NamespacedName.String())
+			r.reconcileLog.Error(err, "Failed Deployment retrieve for status update in namespace: "+req.NamespacedName.String())
 		}
 	} else {
 		r.kwite.Status.ReadyReplicas = int(dep.Status.ReadyReplicas)
@@ -157,23 +156,23 @@ func (r *KwiteReconciler) updateDeploymentStatus(ctx context.Context, req ctrl.R
 }
 
 // Reconcile the Deployment cluster state.
-func (r *KwiteReconciler) reconcileDeployment(ctx context.Context, req ctrl.Request, log logr.Logger) error {
+func (r *KwiteReconciler) reconcileDeployment(ctx context.Context, req ctrl.Request) error {
 	dep := &appsv1.Deployment{}
 
 	if err := r.Get(ctx, req.NamespacedName, dep); err != nil {
 		if apierrs.IsNotFound(err) {
 			// No deployment, create it
-			dep, err = r.getDeployment(req, log)
+			dep, err = r.getDeployment(req)
 			if err != nil {
-				log.Error(err, "failed to create deployment resource")
+				r.reconcileLog.Error(err, "failed to create deployment resource")
 				return err
 			}
 			if err = r.Create(ctx, dep); err != nil {
-				log.Error(err, "failed to create Deployment on the cluster")
+				r.reconcileLog.Error(err, "failed to create Deployment on the cluster")
 				return err
 			}
 		} else {
-			log.Error(err, "unable to retrieve Deployment in namespace "+req.Namespace)
+			r.reconcileLog.Error(err, "unable to retrieve Deployment in namespace "+req.Namespace)
 			return err
 		}
 	}
@@ -193,10 +192,10 @@ func (r *KwiteReconciler) reconcileDeployment(ctx context.Context, req ctrl.Requ
 			doUpdate = true
 		}
 		if doUpdate {
-			log.Info("Updating deployment " + dep.GetName())
+			r.reconcileLog.Info("Updating deployment " + dep.GetName())
 			err := r.Update(ctx, dep)
 			if err != nil {
-				log.Error(err, "Failed to update Deployment.")
+				r.reconcileLog.Error(err, "Failed to update Deployment.")
 				return err
 			}
 		}

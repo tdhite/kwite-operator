@@ -131,7 +131,7 @@ func (r *Kwite) validateKwite() error {
 	}
 
 	return apierrors.NewInvalid(
-		schema.GroupKind{Group: "web.kwite.site", Kind: "Kwite"},
+		schema.GroupKind{Group: "web.kwite.site", Kind: ControllerName},
 		r.Name, allErrs)
 }
 

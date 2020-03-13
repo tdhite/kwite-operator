@@ -11,7 +11,6 @@ package controllers
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -20,7 +19,7 @@ import (
 )
 
 // Create, initialize and return a new Horizontal Pod Autoscaler.
-func (r *KwiteReconciler) getHPA(req ctrl.Request, log logr.Logger) (*asv1.HorizontalPodAutoscaler, error) {
+func (r *KwiteReconciler) getHPA(req ctrl.Request) (*asv1.HorizontalPodAutoscaler, error) {
 	minReplicas := int32(r.kwite.Spec.MinReplicas)
 	maxReplicas := int32(r.kwite.Spec.MaxReplicas)
 	targetCPU := int32(r.kwite.Spec.TargetCpu)
@@ -43,23 +42,23 @@ func (r *KwiteReconciler) getHPA(req ctrl.Request, log logr.Logger) (*asv1.Horiz
 	}
 
 	if err := ctrl.SetControllerReference(r.kwite, hpa, r.Scheme); err != nil {
-		log.Error(err, "Could not set kwite as owner of HPA: ")
+		r.reconcileLog.Error(err, "Could not set kwite as owner of HPA: ")
 		return nil, err
 	}
 
 	return hpa, nil
 }
 
-func (r *KwiteReconciler) updateHPAStatus(ctx context.Context, req ctrl.Request, log logr.Logger) bool {
+func (r *KwiteReconciler) updateHPAStatus(ctx context.Context, req ctrl.Request) bool {
 	hpa := &asv1.HorizontalPodAutoscaler{}
 	doUpdate := false
 
 	if err := r.Get(ctx, req.NamespacedName, hpa); err != nil {
 		// no matter the error, no status update
 		if apierrs.IsNotFound(err) {
-			log.Info("HPA does not exist for status update in namespace: " + req.NamespacedName.String())
+			r.reconcileLog.Info("HPA does not exist for status update in namespace: " + req.NamespacedName.String())
 		} else {
-			log.Error(err, "Failed HPA retrieve for status update in namespace: "+req.NamespacedName.String())
+			r.reconcileLog.Error(err, "Failed HPA retrieve for status update in namespace: "+req.NamespacedName.String())
 		}
 	} else {
 		r.kwite.Status.DesiredReplicas = int(hpa.Status.DesiredReplicas)
@@ -69,23 +68,23 @@ func (r *KwiteReconciler) updateHPAStatus(ctx context.Context, req ctrl.Request,
 }
 
 // Reconcile the Horizontal Pod Autoscaler cluster state.
-func (r *KwiteReconciler) reconcileHPA(ctx context.Context, req ctrl.Request, log logr.Logger) error {
+func (r *KwiteReconciler) reconcileHPA(ctx context.Context, req ctrl.Request) error {
 	hpa := &asv1.HorizontalPodAutoscaler{}
 
 	if err := r.Get(ctx, req.NamespacedName, hpa); err != nil {
 		if apierrs.IsNotFound(err) {
 			// Need to create the HPA since it's not there
-			hpa, err = r.getHPA(req, log)
+			hpa, err = r.getHPA(req)
 			if err != nil {
-				log.Error(err, "failed to create HPA resource")
+				r.reconcileLog.Error(err, "failed to create HPA resource")
 				return err
 			}
 			if err := r.Create(ctx, hpa); err != nil {
-				log.Error(err, "failed to create HPA on the cluster: ")
+				r.reconcileLog.Error(err, "failed to create HPA on the cluster: ")
 				return err
 			}
 		} else {
-			log.Error(err, "unable to list HPA items in namespace "+req.Namespace)
+			r.reconcileLog.Error(err, "unable to list HPA items in namespace "+req.Namespace)
 			return err
 		}
 	}
@@ -112,10 +111,10 @@ func (r *KwiteReconciler) reconcileHPA(ctx context.Context, req ctrl.Request, lo
 			doUpdate = true
 		}
 		if doUpdate {
-			log.Info("Updating HPA " + hpa.GetName())
+			r.reconcileLog.Info("Updating HPA " + hpa.GetName())
 			err := r.Update(ctx, hpa)
 			if err != nil {
-				log.Error(err, "Failed to update HPA.")
+				r.reconcileLog.Error(err, "Failed to update HPA.")
 				return err
 			}
 		}
