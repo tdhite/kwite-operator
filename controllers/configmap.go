@@ -44,6 +44,7 @@ func (r *KwiteReconciler) updateUrlMap(ctx context.Context, cm *corev1.ConfigMap
 		return
 	}
 
+	log.Info("Updating rewrite rules for ConfigMap " + cm.ObjectMeta.Name + "/" + cm.ObjectMeta.Namespace)
 	cm.Data["rewrite"] = string(b)
 	if err := r.Update(ctx, cm); err != nil {
 		log.Error(err, "Failed to update reformed ConfigMap.")
@@ -68,7 +69,7 @@ func urlMapFromJson(s string) (map[string]string, error) {
 
 // Fixup all Kwite owned ConfigMaps with the appropriate kwite
 // scheme Url mapping .
-func (r *KwiteReconciler) reformKwiteUrl(ctx context.Context, req ctrl.Request, log logr.Logger) {
+func (r *KwiteReconciler) reformKwiteUrls(ctx context.Context, req ctrl.Request, log logr.Logger) {
 	cmList, err := r.getAllConfigMaps(ctx, req, log)
 	if err == nil {
 		for _, cm := range cmList.Items {
@@ -134,7 +135,7 @@ func (r *KwiteReconciler) getConfigMap(req ctrl.Request, log logr.Logger) (*core
 }
 
 // Reconcile the ConfigMap's observed cluster state relative to desired state.
-func (r *KwiteReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Request, log logr.Logger) (bool, error) {
+func (r *KwiteReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Request, updateUrls bool, log logr.Logger) error {
 	cm := &corev1.ConfigMap{}
 
 	if err := r.Get(ctx, req.NamespacedName, cm); err != nil {
@@ -143,15 +144,15 @@ func (r *KwiteReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Reque
 			cm, err = r.getConfigMap(req, log)
 			if err != nil {
 				log.Error(err, "Failed to configure ConfigMap")
-				return false, err
+				return err
 			}
 			if err = r.Create(ctx, cm); err != nil {
 				log.Error(err, "unable to create ConfigMap")
-				return false, err
+				return err
 			}
 		} else {
 			log.Error(err, "unable to retrieve ConfigMap")
-			return false, err
+			return err
 		}
 	}
 
@@ -161,7 +162,6 @@ func (r *KwiteReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Reque
 	if cm.ObjectMeta.DeletionTimestamp.IsZero() {
 		if r.kwite.Spec.Url != cm.Data["url"] {
 			cm.Data["url"] = r.kwite.Spec.Url
-			r.reformKwiteUrl(ctx, req, log)
 			doUpdate = true
 		}
 		if r.kwite.Spec.Template != cm.Data["template"] {
@@ -176,15 +176,20 @@ func (r *KwiteReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Reque
 			cm.Data["alive"] = r.kwite.Spec.Alive
 			doUpdate = true
 		}
+
+		if updateUrls {
+			r.reformKwiteUrls(ctx, req, log)
+		}
+
 		if doUpdate {
 			log.Info("Updating ConfigMap " + cm.GetName())
 			err := r.Update(ctx, cm)
 			if err != nil {
 				log.Error(err, "Failed to update ConfigMap.")
-				return false, err
+				return err
 			}
 		}
 	}
 
-	return doUpdate, nil
+	return nil
 }

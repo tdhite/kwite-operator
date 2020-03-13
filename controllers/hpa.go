@@ -50,12 +50,26 @@ func (r *KwiteReconciler) getHPA(req ctrl.Request, log logr.Logger) (*asv1.Horiz
 	return hpa, nil
 }
 
-func (r *KwiteReconciler) updateHPAStatus(hpa *asv1.HorizontalPodAutoscaler) {
-	r.kwite.Status.DesiredReplicas = int(hpa.Status.DesiredReplicas)
+func (r *KwiteReconciler) updateHPAStatus(ctx context.Context, req ctrl.Request, log logr.Logger) bool {
+	hpa := &asv1.HorizontalPodAutoscaler{}
+	doUpdate := false
+
+	if err := r.Get(ctx, req.NamespacedName, hpa); err != nil {
+		// no matter the error, no status update
+		if apierrs.IsNotFound(err) {
+			log.Info("HPA does not exist for status update in namespace: " + req.NamespacedName.String())
+		} else {
+			log.Error(err, "Failed HPA retrieve for status update in namespace: "+req.NamespacedName.String())
+		}
+	} else {
+		r.kwite.Status.DesiredReplicas = int(hpa.Status.DesiredReplicas)
+		doUpdate = true
+	}
+	return doUpdate
 }
 
 // Reconcile the Horizontal Pod Autoscaler cluster state.
-func (r *KwiteReconciler) reconcileHPA(ctx context.Context, req ctrl.Request, log logr.Logger) (bool, error) {
+func (r *KwiteReconciler) reconcileHPA(ctx context.Context, req ctrl.Request, log logr.Logger) error {
 	hpa := &asv1.HorizontalPodAutoscaler{}
 
 	if err := r.Get(ctx, req.NamespacedName, hpa); err != nil {
@@ -64,15 +78,15 @@ func (r *KwiteReconciler) reconcileHPA(ctx context.Context, req ctrl.Request, lo
 			hpa, err = r.getHPA(req, log)
 			if err != nil {
 				log.Error(err, "failed to create HPA resource")
-				return false, err
+				return err
 			}
 			if err := r.Create(ctx, hpa); err != nil {
 				log.Error(err, "failed to create HPA on the cluster: ")
-				return false, err
+				return err
 			}
 		} else {
 			log.Error(err, "unable to list HPA items in namespace "+req.Namespace)
-			return false, err
+			return err
 		}
 	}
 
@@ -102,10 +116,10 @@ func (r *KwiteReconciler) reconcileHPA(ctx context.Context, req ctrl.Request, lo
 			err := r.Update(ctx, hpa)
 			if err != nil {
 				log.Error(err, "Failed to update HPA.")
-				return false, err
+				return err
 			}
 		}
 	}
 
-	return doUpdate, nil
+	return nil
 }

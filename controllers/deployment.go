@@ -137,13 +137,27 @@ func (r *KwiteReconciler) getDeployment(req ctrl.Request, log logr.Logger) (*app
 	return d, nil
 }
 
-func (r *KwiteReconciler) updateDeploymentStatus(d *appsv1.Deployment, log logr.Logger) {
-	r.kwite.Status.ReadyReplicas = int(d.Status.ReadyReplicas)
-	r.kwite.Status.Ready = d.Status.ReadyReplicas == int32(r.kwite.Spec.MinReplicas)
+func (r *KwiteReconciler) updateDeploymentStatus(ctx context.Context, req ctrl.Request, log logr.Logger) bool {
+	dep := &appsv1.Deployment{}
+	doUpdate := false
+
+	if err := r.Get(ctx, req.NamespacedName, dep); err != nil {
+		// no matter the error, no status update
+		if apierrs.IsNotFound(err) {
+			log.Info("Deployment does not exist for status update in namespace: " + req.NamespacedName.String())
+		} else {
+			log.Error(err, "Failed Deployment retrieve for status update in namespace: "+req.NamespacedName.String())
+		}
+	} else {
+		r.kwite.Status.ReadyReplicas = int(dep.Status.ReadyReplicas)
+		r.kwite.Status.Ready = dep.Status.ReadyReplicas == int32(r.kwite.Spec.MinReplicas)
+		doUpdate = true
+	}
+	return doUpdate
 }
 
 // Reconcile the Deployment cluster state.
-func (r *KwiteReconciler) reconcileDeployment(ctx context.Context, req ctrl.Request, log logr.Logger) (bool, error) {
+func (r *KwiteReconciler) reconcileDeployment(ctx context.Context, req ctrl.Request, log logr.Logger) error {
 	dep := &appsv1.Deployment{}
 
 	if err := r.Get(ctx, req.NamespacedName, dep); err != nil {
@@ -152,15 +166,15 @@ func (r *KwiteReconciler) reconcileDeployment(ctx context.Context, req ctrl.Requ
 			dep, err = r.getDeployment(req, log)
 			if err != nil {
 				log.Error(err, "failed to create deployment resource")
-				return false, err
+				return err
 			}
 			if err = r.Create(ctx, dep); err != nil {
 				log.Error(err, "failed to create Deployment on the cluster")
-				return false, err
+				return err
 			}
 		} else {
 			log.Error(err, "unable to retrieve Deployment in namespace "+req.Namespace)
-			return false, err
+			return err
 		}
 	}
 
@@ -168,8 +182,6 @@ func (r *KwiteReconciler) reconcileDeployment(ctx context.Context, req ctrl.Requ
 	// However, if deleting, just leave it alone.
 	doUpdate := false
 	if dep.ObjectMeta.DeletionTimestamp.IsZero() {
-		r.updateDeploymentStatus(dep, log)
-
 		// note: replicas get managed by HPA
 		if r.kwite.Spec.Image != dep.Spec.Template.Spec.Containers[0].Image {
 			dep.Spec.Template.Spec.Containers[0].Image = r.kwite.Spec.Image
@@ -185,10 +197,10 @@ func (r *KwiteReconciler) reconcileDeployment(ctx context.Context, req ctrl.Requ
 			err := r.Update(ctx, dep)
 			if err != nil {
 				log.Error(err, "Failed to update Deployment.")
-				return false, err
+				return err
 			}
 		}
 	}
 
-	return doUpdate, nil
+	return nil
 }

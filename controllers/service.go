@@ -104,12 +104,29 @@ func (r *KwiteReconciler) getServiceHostName(req ctrl.Request) string {
 	return fmt.Sprintf("%s.%s", req.Name, req.Namespace)
 }
 
-func (r *KwiteReconciler) updateAddressStatus(req ctrl.Request, svc *corev1.Service, log logr.Logger) {
-	r.kwite.Status.Address = r.getKwiteFqdn(r.getServiceHostName(req), svc, log)
+func (r *KwiteReconciler) updateServiceStatus(ctx context.Context, req ctrl.Request, log logr.Logger) bool {
+	svc := &corev1.Service{}
+	doUpdate := false
+
+	if err := r.Get(ctx, req.NamespacedName, svc); err != nil {
+		if apierrs.IsNotFound(err) {
+			log.Info("Service does not exist for status update in namespace: " + req.NamespacedName.String())
+		} else {
+			log.Error(err, "Failed Service retrieve for status update in namespace: "+req.NamespacedName.String())
+		}
+	} else {
+		newAddr := r.getKwiteFqdn(r.getServiceHostName(req), svc, log)
+		if newAddr != r.kwite.Status.Address {
+			r.kwite.Status.Address = newAddr
+			doUpdate = true
+		}
+	}
+
+	return doUpdate
 }
 
 // Reconcile the Service cluster state.
-func (r *KwiteReconciler) reconcileService(ctx context.Context, req ctrl.Request, log logr.Logger) (bool, error) {
+func (r *KwiteReconciler) reconcileService(ctx context.Context, req ctrl.Request, log logr.Logger) error {
 	svc := &corev1.Service{}
 
 	if err := r.Get(ctx, req.NamespacedName, svc); err != nil {
@@ -118,15 +135,15 @@ func (r *KwiteReconciler) reconcileService(ctx context.Context, req ctrl.Request
 			svc, err = r.getService(req, log)
 			if err != nil {
 				log.Error(err, "failed to create Service resource")
-				return false, err
+				return err
 			}
 			if err := r.Create(ctx, svc); err != nil {
 				log.Error(err, "failed to create Service on the cluster: ")
-				return false, err
+				return err
 			}
 		} else {
 			log.Error(err, "unable to retrieve Service in namespace "+req.Namespace)
-			return false, err
+			return err
 		}
 	}
 
@@ -136,9 +153,6 @@ func (r *KwiteReconciler) reconcileService(ctx context.Context, req ctrl.Request
 	if svc.ObjectMeta.DeletionTimestamp.IsZero() {
 		// check current state against the loaded deployment and update as needed
 		iVal := int(svc.Spec.Ports[0].Port)
-
-		// Update observed status first
-		r.updateAddressStatus(req, svc, log)
 
 		if r.kwite.Spec.Port != iVal {
 			svc.Spec.Ports[0].Port = int32(r.kwite.Spec.Port)
@@ -155,10 +169,10 @@ func (r *KwiteReconciler) reconcileService(ctx context.Context, req ctrl.Request
 			err := r.Update(ctx, svc)
 			if err != nil {
 				log.Error(err, "Failed to update Service.")
-				return false, err
+				return err
 			}
 		}
 	}
 
-	return doUpdate, nil
+	return nil
 }

@@ -70,25 +70,30 @@ func (r *KwiteReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// Cache this kwite for reconcilation ease
 	r.kwite = &kwite
 
-	// reconcile against the deployment
-	u, _ := r.reconcileDeployment(ctx, req, log)
-	update := u
+	// get current status and setup to apply kwite url rewrites where appropriate
+	update := r.updateDeploymentStatus(ctx, req, log) || r.updateHPAStatus(ctx, req, log)
+	updateUrls := r.updateServiceStatus(ctx, req, log)
+	update = update || updateUrls
 
-	// reconcile against the service
-	u, _ = r.reconcileService(ctx, req, log)
-	update = u || update
+	if update {
+		if err := r.Status().Update(ctx, &kwite); err != nil {
+			log.Error(err, "Unable to update Kwite status")
+			return ctrl.Result{}, err
+		}
+	}
 
-	// reconcile against the hpa
-	u, _ = r.reconcileHPA(ctx, req, log)
-	update = u || update
-
-	// reconcile this last because it needs up to date Status
-	u, _ = r.reconcileConfigMap(ctx, req, log)
-	update = u || update
-
-	if err := r.Status().Update(ctx, &kwite); err != nil {
-		log.Error(err, "Unable to update Kwite status")
-		return ctrl.Result{}, err
+	// reconcile against the various objects
+	if err := r.reconcileDeployment(ctx, req, log); err != nil {
+		log.Error(err, "Failed to update Deployment for ", req.NamespacedName.String())
+	}
+	if err := r.reconcileService(ctx, req, log); err != nil {
+		log.Error(err, "Failed to update Service for ", req.NamespacedName.String())
+	}
+	if err := r.reconcileHPA(ctx, req, log); err != nil {
+		log.Error(err, "Failed to update HPA for ", req.NamespacedName.String())
+	}
+	if err := r.reconcileConfigMap(ctx, req, updateUrls, log); err != nil {
+		log.Error(err, "Failed to update ConfigMap for ", req.NamespacedName.String())
 	}
 
 	return res, nil
