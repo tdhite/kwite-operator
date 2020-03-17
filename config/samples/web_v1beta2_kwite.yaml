@@ -5,7 +5,7 @@ metadata:
 spec:
   url: /kwite
   port: 8081
-  image: registry.hub.docker.com/tdhite/kwite:0.0.58
+  image: registry.hub.docker.com/tdhite/kwite:latest
   targetcpu: 50
   minreplicas: 1
   maxreplicas: 10
