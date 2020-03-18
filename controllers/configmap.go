@@ -36,18 +36,21 @@ func (r *KwiteReconciler) getAllConfigMaps(ctx context.Context, req ctrl.Request
 }
 
 // Update the Kwite URL Map to storage.
-func (r *KwiteReconciler) updateUrlMap(ctx context.Context, cm *corev1.ConfigMap, m map[string]string) {
+func (r *KwiteReconciler) updateUrlMap(ctx context.Context, cm *corev1.ConfigMap, m map[string]string) error {
 	b, err := json.Marshal(m)
 	if err != nil {
 		r.reconcileLog.Error(err, "Failed to convert rewrite map to JSON.")
-		return
+		return err
 	}
 
 	r.reconcileLog.Info("Updating rewrite rules for ConfigMap " + cm.ObjectMeta.Name + "/" + cm.ObjectMeta.Namespace)
 	cm.Data["rewrite"] = string(b)
 	if err := r.Update(ctx, cm); err != nil {
 		r.reconcileLog.Error(err, "Failed to update reformed ConfigMap.")
+		return err
 	}
+
+	return nil
 }
 
 // Return a map from the provided JSON string.
@@ -68,11 +71,11 @@ func (r *KwiteReconciler) urlMapFromJson(s string) (map[string]string, error) {
 
 // Fixup all Kwite owned ConfigMaps with the appropriate kwite
 // scheme Url mapping .
-func (r *KwiteReconciler) reformKwiteUrls(ctx context.Context, req ctrl.Request) {
+func (r *KwiteReconciler) reformKwiteUrls(ctx context.Context, req ctrl.Request) bool {
+	doUpdate := false
 	cmList, err := r.getAllConfigMaps(ctx, req)
 	if err == nil {
 		for _, cm := range cmList.Items {
-			r.reconcileLog.Info("Rewriting kwite url map from ConfigMap " + cm.ObjectMeta.Name)
 			rewriteMap, err := r.urlMapFromJson(cm.Data["rewrite"])
 			if err != nil {
 				r.reconcileLog.Info("JSON rewrite info failed marshall to string for " + req.NamespacedName.String())
@@ -82,14 +85,18 @@ func (r *KwiteReconciler) reformKwiteUrls(ctx context.Context, req ctrl.Request)
 			if rewriteMap[key] != r.kwite.Status.Address {
 				r.reconcileLog.Info("Updating URL map entry for " + key + " to " + r.kwite.Status.Address)
 				rewriteMap[key] = r.kwite.Status.Address
-				r.updateUrlMap(ctx, &cm, rewriteMap)
+				if err := r.updateUrlMap(ctx, &cm, rewriteMap); err != nil {
+					doUpdate = true
+				}
 			}
 		}
 	}
+	return doUpdate
 }
 
 // Delete the url mapping for the quite from the ConfigMap.
-func (r *KwiteReconciler) removeKwiteUrl(ctx context.Context, req ctrl.Request) {
+func (r *KwiteReconciler) removeKwiteUrl(ctx context.Context, req ctrl.Request) bool {
+	doUpdate := false
 	cmList, err := r.getAllConfigMaps(ctx, req)
 	if err == nil {
 		for _, cm := range cmList.Items {
@@ -102,9 +109,12 @@ func (r *KwiteReconciler) removeKwiteUrl(ctx context.Context, req ctrl.Request) 
 			key := r.getServiceHostName(req)
 			r.reconcileLog.Info("Updating URL map entry for " + key)
 			delete(rewriteMap, key)
-			r.updateUrlMap(ctx, &cm, rewriteMap)
+			if err := r.updateUrlMap(ctx, &cm, rewriteMap); err != nil {
+				doUpdate = true
+			}
 		}
 	}
+	return doUpdate
 }
 
 // getConfigMap creates a configmap for kwite deployments
@@ -138,7 +148,7 @@ func (r *KwiteReconciler) getConfigMap(req ctrl.Request) (*corev1.ConfigMap, err
 }
 
 // Reconcile the ConfigMap's observed cluster state relative to desired state.
-func (r *KwiteReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Request, updateUrls bool) error {
+func (r *KwiteReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Request) error {
 	cm := &corev1.ConfigMap{}
 
 	if err := r.Get(ctx, req.NamespacedName, cm); err != nil {
@@ -180,9 +190,7 @@ func (r *KwiteReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Reque
 			doUpdate = true
 		}
 
-		if updateUrls {
-			r.reformKwiteUrls(ctx, req)
-		}
+		r.reformKwiteUrls(ctx, req)
 
 		if doUpdate {
 			r.reconcileLog.Info("Updating ConfigMap " + cm.GetName())

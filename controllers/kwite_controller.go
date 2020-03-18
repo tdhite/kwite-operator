@@ -72,9 +72,7 @@ func (r *KwiteReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	r.kwite = &kwite
 
 	// get current status and setup to apply kwite url rewrites where appropriate
-	update := r.updateDeploymentStatus(ctx, req) || r.updateHPAStatus(ctx, req)
-	updateUrls := r.updateServiceStatus(ctx, req)
-	update = update || updateUrls
+	update := r.updateDeploymentStatus(ctx, req) || r.updateHPAStatus(ctx, req) || r.updateServiceStatus(ctx, req)
 
 	if update {
 		if err := r.Status().Update(ctx, &kwite); err != nil {
@@ -93,7 +91,7 @@ func (r *KwiteReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if err := r.reconcileHPA(ctx, req); err != nil {
 		r.reconcileLog.Error(err, "Failed to update HPA for ", req.NamespacedName.String())
 	}
-	if err := r.reconcileConfigMap(ctx, req, updateUrls); err != nil {
+	if err := r.reconcileConfigMap(ctx, req); err != nil {
 		r.reconcileLog.Error(err, "Failed to update ConfigMap for ", req.NamespacedName.String())
 	}
 
