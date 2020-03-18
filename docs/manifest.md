@@ -15,6 +15,8 @@ spec:
   url: "/kwite"
   port: 8080
   image: "concourse.corp.local/kwite:latest"
+  imagePullSecrets:
+  - name: kwite-registry-creds
   targetcpu: 50
   minreplicas: 1
   maxreplicas: 10
@@ -55,6 +57,12 @@ The container image identifier Kwite-operator should use for starting and
 scaling Kwites. This should be set to the container registry path to the
 container image and Kubernetes must have access to that registry in order to
 pull the image. For example `concourse.corp.local/kwite:latest`.
+
+* `spec.imagePullSecrets`:
+An (optional) array of [Kubernetes registry
+secrets](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod)
+to use for image registries from which to pull Kwite and Kwite-operator
+container images.
 
 * `spec.memory`:
 This sets the minimum amount of available memory necessary to schedule a Kwite
