@@ -3,6 +3,8 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.4
   creationTimestamp: null
   name: kwites.web.kwite.site
 spec:
@@ -12,242 +14,240 @@ spec:
     listKind: KwiteList
     plural: kwites
     singular: kwite
-  scope: ""
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: Kwite is the Schema for the kwites API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: KwiteSpec defines the desired state of Kwite
+          properties:
+            alive:
+              description: The template to execute for aliveness probes
+              minLength: 0
+              type: string
+            cpu:
+              description: CPU Resource request (e.g., "200m"), defaults to "200m"
+              type: string
+            image:
+              description: container image to use for the http(s) server, default
+                is kwite:latest
+              type: string
+            imagePullSecrets:
+              description: Image pull secrets name for container pulls.
+              items:
+                description: LocalObjectReference contains enough information to let
+                  you locate the referenced object inside the same namespace.
+                properties:
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                type: object
+              type: array
+            maxreplicas:
+              description: The maximum number of page hander replicas, default is
+                1 (one)
+              minimum: 1
+              type: integer
+            memory:
+              description: Memory Resource request (e.g., "128Mi"), defaults to "64Mi"
+              type: string
+            minreplicas:
+              description: The minimum number of page hander replicas, default is
+                1 (one)
+              minimum: 1
+              type: integer
+            port:
+              description: port on which to expose the Url, default is 8080
+              type: integer
+            public:
+              description: Whether the url is public (i.e., needs an ingress), default
+                false
+              type: boolean
+            ready:
+              description: The template to execute for the readiness probes
+              minLength: 0
+              type: string
+            securityContext:
+              description: The security context for kwite instance Pods, default is
+                no specified context
+              properties:
+                allowPrivilegeEscalation:
+                  description: 'AllowPrivilegeEscalation controls whether a process
+                    can gain more privileges than its parent process. This bool directly
+                    controls if the no_new_privs flag will be set on the container
+                    process. AllowPrivilegeEscalation is true always when the container
+                    is: 1) run as Privileged 2) has CAP_SYS_ADMIN'
+                  type: boolean
+                capabilities:
+                  description: The capabilities to add/drop when running containers.
+                    Defaults to the default set of capabilities granted by the container
+                    runtime.
+                  properties:
+                    add:
+                      description: Added capabilities
+                      items:
+                        description: Capability represent POSIX capabilities type
+                        type: string
+                      type: array
+                    drop:
+                      description: Removed capabilities
+                      items:
+                        description: Capability represent POSIX capabilities type
+                        type: string
+                      type: array
+                  type: object
+                privileged:
+                  description: Run container in privileged mode. Processes in privileged
+                    containers are essentially equivalent to root on the host. Defaults
+                    to false.
+                  type: boolean
+                procMount:
+                  description: procMount denotes the type of proc mount to use for
+                    the containers. The default is DefaultProcMount which uses the
+                    container runtime defaults for readonly paths and masked paths.
+                    This requires the ProcMountType feature flag to be enabled.
+                  type: string
+                readOnlyRootFilesystem:
+                  description: Whether this container has a read-only root filesystem.
+                    Default is false.
+                  type: boolean
+                runAsGroup:
+                  description: The GID to run the entrypoint of the container process.
+                    Uses runtime default if unset. May also be set in PodSecurityContext.  If
+                    set in both SecurityContext and PodSecurityContext, the value
+                    specified in SecurityContext takes precedence.
+                  format: int64
+                  type: integer
+                runAsNonRoot:
+                  description: Indicates that the container must run as a non-root
+                    user. If true, the Kubelet will validate the image at runtime
+                    to ensure that it does not run as UID 0 (root) and fail to start
+                    the container if it does. If unset or false, no such validation
+                    will be performed. May also be set in PodSecurityContext.  If
+                    set in both SecurityContext and PodSecurityContext, the value
+                    specified in SecurityContext takes precedence.
+                  type: boolean
+                runAsUser:
+                  description: The UID to run the entrypoint of the container process.
+                    Defaults to user specified in image metadata if unspecified. May
+                    also be set in PodSecurityContext.  If set in both SecurityContext
+                    and PodSecurityContext, the value specified in SecurityContext
+                    takes precedence.
+                  format: int64
+                  type: integer
+                seLinuxOptions:
+                  description: The SELinux context to be applied to the container.
+                    If unspecified, the container runtime will allocate a random SELinux
+                    context for each container.  May also be set in PodSecurityContext.  If
+                    set in both SecurityContext and PodSecurityContext, the value
+                    specified in SecurityContext takes precedence.
+                  properties:
+                    level:
+                      description: Level is SELinux level label that applies to the
+                        container.
+                      type: string
+                    role:
+                      description: Role is a SELinux role label that applies to the
+                        container.
+                      type: string
+                    type:
+                      description: Type is a SELinux type label that applies to the
+                        container.
+                      type: string
+                    user:
+                      description: User is a SELinux user label that applies to the
+                        container.
+                      type: string
+                  type: object
+                windowsOptions:
+                  description: The Windows specific settings applied to all containers.
+                    If unspecified, the options from the PodSecurityContext will be
+                    used. If set in both SecurityContext and PodSecurityContext, the
+                    value specified in SecurityContext takes precedence.
+                  properties:
+                    gmsaCredentialSpec:
+                      description: GMSACredentialSpec is where the GMSA admission
+                        webhook (https://github.com/kubernetes-sigs/windows-gmsa)
+                        inlines the contents of the GMSA credential spec named by
+                        the GMSACredentialSpecName field. This field is alpha-level
+                        and is only honored by servers that enable the WindowsGMSA
+                        feature flag.
+                      type: string
+                    gmsaCredentialSpecName:
+                      description: GMSACredentialSpecName is the name of the GMSA
+                        credential spec to use. This field is alpha-level and is only
+                        honored by servers that enable the WindowsGMSA feature flag.
+                      type: string
+                    runAsUserName:
+                      description: The UserName in Windows to run the entrypoint of
+                        the container process. Defaults to the user specified in image
+                        metadata if unspecified. May also be set in PodSecurityContext.
+                        If set in both SecurityContext and PodSecurityContext, the
+                        value specified in SecurityContext takes precedence. This
+                        field is alpha-level and it is only honored by servers that
+                        enable the WindowsRunAsUserName feature flag.
+                      type: string
+                  type: object
+              type: object
+            targetcpu:
+              description: HorizontalPodAutoscaler CPU target utilization per pod,
+                default is 80
+              minimum: 1
+              type: integer
+            template:
+              description: The template to execute for the kwite instances
+              minLength: 0
+              type: string
+            url:
+              description: The URL to handle in the kwite instances, default "/"
+              minLength: 0
+              type: string
+          required:
+          - alive
+          - ready
+          - template
+          - url
+          type: object
+        status:
+          description: KwiteStatus defines the observed state of Kwite
+          properties:
+            address:
+              description: The service address on which the URL is exposed
+              type: string
+            desiredReplicas:
+              description: The total number of replicas HPA is requesting
+              type: integer
+            ready:
+              description: True if the minimum number of replicas are ready
+              type: boolean
+            readyReplicas:
+              description: The number of ready replicas HPA is requesting
+              type: integer
+          required:
+          - ready
+          type: object
+      type: object
   version: v1beta1
   versions:
   - name: v1beta1
-    schema:
-      openAPIV3Schema:
-        description: Kwite is the Schema for the kwites API
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: KwiteSpec defines the desired state of Kwite
-            properties:
-              alive:
-                description: The template to execute for aliveness probes
-                minLength: 0
-                type: string
-              cpu:
-                description: CPU Resource request (e.g., "200m"), defaults to "200m"
-                type: string
-              image:
-                description: container image to use for the http(s) server, default
-                  is kwite:latest
-                type: string
-              imagePullSecrets:
-                description: Image pull secrets name for container pulls.
-                items:
-                  description: LocalObjectReference contains enough information to
-                    let you locate the referenced object inside the same namespace.
-                  properties:
-                    name:
-                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                        TODO: Add other useful fields. apiVersion, kind, uid?'
-                      type: string
-                  type: object
-                type: array
-              maxreplicas:
-                description: The maximum number of page hander replicas, default is
-                  1 (one)
-                minimum: 1
-                type: integer
-              memory:
-                description: Memory Resource request (e.g., "128Mi"), defaults to
-                  "64Mi"
-                type: string
-              minreplicas:
-                description: The minimum number of page hander replicas, default is
-                  1 (one)
-                minimum: 1
-                type: integer
-              port:
-                description: port on which to expose the Url, default is 8080
-                type: integer
-              public:
-                description: Whether the url is public (i.e., needs an ingress), default
-                  false
-                type: boolean
-              ready:
-                description: The template to execute for the readiness probes
-                minLength: 0
-                type: string
-              securityContext:
-                description: The security context for kwite instance Pods, default
-                  is no specified context
-                properties:
-                  allowPrivilegeEscalation:
-                    description: 'AllowPrivilegeEscalation controls whether a process
-                      can gain more privileges than its parent process. This bool
-                      directly controls if the no_new_privs flag will be set on the
-                      container process. AllowPrivilegeEscalation is true always when
-                      the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN'
-                    type: boolean
-                  capabilities:
-                    description: The capabilities to add/drop when running containers.
-                      Defaults to the default set of capabilities granted by the container
-                      runtime.
-                    properties:
-                      add:
-                        description: Added capabilities
-                        items:
-                          description: Capability represent POSIX capabilities type
-                          type: string
-                        type: array
-                      drop:
-                        description: Removed capabilities
-                        items:
-                          description: Capability represent POSIX capabilities type
-                          type: string
-                        type: array
-                    type: object
-                  privileged:
-                    description: Run container in privileged mode. Processes in privileged
-                      containers are essentially equivalent to root on the host. Defaults
-                      to false.
-                    type: boolean
-                  procMount:
-                    description: procMount denotes the type of proc mount to use for
-                      the containers. The default is DefaultProcMount which uses the
-                      container runtime defaults for readonly paths and masked paths.
-                      This requires the ProcMountType feature flag to be enabled.
-                    type: string
-                  readOnlyRootFilesystem:
-                    description: Whether this container has a read-only root filesystem.
-                      Default is false.
-                    type: boolean
-                  runAsGroup:
-                    description: The GID to run the entrypoint of the container process.
-                      Uses runtime default if unset. May also be set in PodSecurityContext.  If
-                      set in both SecurityContext and PodSecurityContext, the value
-                      specified in SecurityContext takes precedence.
-                    format: int64
-                    type: integer
-                  runAsNonRoot:
-                    description: Indicates that the container must run as a non-root
-                      user. If true, the Kubelet will validate the image at runtime
-                      to ensure that it does not run as UID 0 (root) and fail to start
-                      the container if it does. If unset or false, no such validation
-                      will be performed. May also be set in PodSecurityContext.  If
-                      set in both SecurityContext and PodSecurityContext, the value
-                      specified in SecurityContext takes precedence.
-                    type: boolean
-                  runAsUser:
-                    description: The UID to run the entrypoint of the container process.
-                      Defaults to user specified in image metadata if unspecified.
-                      May also be set in PodSecurityContext.  If set in both SecurityContext
-                      and PodSecurityContext, the value specified in SecurityContext
-                      takes precedence.
-                    format: int64
-                    type: integer
-                  seLinuxOptions:
-                    description: The SELinux context to be applied to the container.
-                      If unspecified, the container runtime will allocate a random
-                      SELinux context for each container.  May also be set in PodSecurityContext.  If
-                      set in both SecurityContext and PodSecurityContext, the value
-                      specified in SecurityContext takes precedence.
-                    properties:
-                      level:
-                        description: Level is SELinux level label that applies to
-                          the container.
-                        type: string
-                      role:
-                        description: Role is a SELinux role label that applies to
-                          the container.
-                        type: string
-                      type:
-                        description: Type is a SELinux type label that applies to
-                          the container.
-                        type: string
-                      user:
-                        description: User is a SELinux user label that applies to
-                          the container.
-                        type: string
-                    type: object
-                  windowsOptions:
-                    description: The Windows specific settings applied to all containers.
-                      If unspecified, the options from the PodSecurityContext will
-                      be used. If set in both SecurityContext and PodSecurityContext,
-                      the value specified in SecurityContext takes precedence.
-                    properties:
-                      gmsaCredentialSpec:
-                        description: GMSACredentialSpec is where the GMSA admission
-                          webhook (https://github.com/kubernetes-sigs/windows-gmsa)
-                          inlines the contents of the GMSA credential spec named by
-                          the GMSACredentialSpecName field. This field is alpha-level
-                          and is only honored by servers that enable the WindowsGMSA
-                          feature flag.
-                        type: string
-                      gmsaCredentialSpecName:
-                        description: GMSACredentialSpecName is the name of the GMSA
-                          credential spec to use. This field is alpha-level and is
-                          only honored by servers that enable the WindowsGMSA feature
-                          flag.
-                        type: string
-                      runAsUserName:
-                        description: The UserName in Windows to run the entrypoint
-                          of the container process. Defaults to the user specified
-                          in image metadata if unspecified. May also be set in PodSecurityContext.
-                          If set in both SecurityContext and PodSecurityContext, the
-                          value specified in SecurityContext takes precedence. This
-                          field is alpha-level and it is only honored by servers that
-                          enable the WindowsRunAsUserName feature flag.
-                        type: string
-                    type: object
-                type: object
-              targetcpu:
-                description: HorizontalPodAutoscaler CPU target utilization per pod,
-                  default is 80
-                minimum: 1
-                type: integer
-              template:
-                description: The template to execute for the kwite instances
-                minLength: 0
-                type: string
-              url:
-                description: The URL to handle in the kwite instances, default "/"
-                minLength: 0
-                type: string
-            required:
-            - alive
-            - ready
-            - template
-            - url
-            type: object
-          status:
-            description: KwiteStatus defines the observed state of Kwite
-            properties:
-              address:
-                description: The service address on which the URL is exposed
-                type: string
-              desiredReplicas:
-                description: The total number of replicas HPA is requesting
-                type: integer
-              ready:
-                description: True if the minimum number of replicas are ready
-                type: boolean
-              readyReplicas:
-                description: The number of ready replicas HPA is requesting
-                type: integer
-            required:
-            - ready
-            type: object
-        type: object
     served: true
     storage: true
-    subresources:
-      status: {}
 status:
   acceptedNames:
     kind: ""

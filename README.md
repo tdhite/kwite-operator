@@ -82,7 +82,7 @@ Secrets for pushing and pulling containers from the Docker registry should
 exist before building Kwite-operator. One way to add such credentials is as
 follows:
 
-    kubectl create secret docker-registry kwite-operator-registry-creds --docker-server=<your-registry-server> --docker-username=<your-name> --docker-password=<your-pword> --docker-email=<your-email>
+    kubectl create secret docker-registry kwiteop-registry-creds --docker-server=<your-registry-server> --docker-username=<your-name> --docker-password=<your-pword> --docker-email=<your-email>
 
 ### Build and Run
 Building the code involves very few steps and there are some CI/CD options to
