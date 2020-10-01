@@ -25,7 +25,7 @@ mkdir -p ${OUTPUT}
 
 # Build the beast
 cd sources
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o ${OUTPUT}/manager main.go
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a --installsuffix cgo -o ${OUTPUT}/manager main.go
 
 # Check static linked binary
 echo "Check static link status:"

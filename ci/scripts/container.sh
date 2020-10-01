@@ -18,21 +18,36 @@ TAG=$(cat version/version)
 echo "TOP is: " $TOP
 echo ""
 
+# Create the output directory tree if necessary
+mkdir -p ${TOP}/container/etc
+
 # Copy build results and static content to the output
 echo "Copy/create build artifacts on output"
 cp -a ${TOP}/build/manager ${TOP}/container/
 
+# Create necessary files for scratch based container
+cat >${TOP}/container/etc/hosts <<-EOF
+	127.0.0.1	localhost
+	::1		localhost
+EOF
+
+echo "hosts: files dns" >${TOP}/container/etc/nsswitch
+
+echo "nobody:x:65534:65534:Nobody:/:/noshellexists" >${TOP}/container/etc/passwd
+
+mkdir -p ${TOP}/container/tmp && chmod 777 ${TOP}/container/tmp && chmod +t ${TOP}/container/tmp
+
+tar -C ${TOP}/container -cvzf ${TOP}/container/rootfs.tgz etc tmp
+
 # Create the docker build file
 cat >${TOP}/container/Dockerfile <<-EOF
-	FROM gcr.io/distroless/static:nonroot
-
-	LABEL MAINTAINER="thite@vmware.com" \
+	FROM scratch
+	LABEL MAINTAINER="thite@vmware.com" \\
 	      VERSION="${TAG}"
-
 	WORKDIR /
-	COPY manager .
-	USER nonroot:nonroot
-
+	COPY --chown=65534:65534 manager /manager
+	ADD rootfs.tgz /
+	USER 65534:65534
 	ENTRYPOINT ["/manager"]
 EOF
 
