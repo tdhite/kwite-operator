@@ -25,13 +25,19 @@ import (
 
 // Reconcile the Horizontal Pod Autoscaler cluster state.
 func (r *KwiteReconciler) getService(req ctrl.Request) (*corev1.Service, error) {
+	var sType corev1.ServiceType
+	if r.kwite.Spec.Publish != "LoadBalancer" {
+		sType = corev1.ServiceType(r.kwite.Spec.Publish)
+	} else {
+		sType = "ClusterIP"
+	}
 	s := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      req.Name,
 			Namespace: req.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     "ClusterIP",
+			Type:     sType,
 			Selector: getLabelSelector(req),
 			Ports: []corev1.ServicePort{
 				{

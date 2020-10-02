@@ -9,6 +9,7 @@ SPDX-License-Identifier: https://spdx.org/licenses/MIT.html
 package v1beta1
 
 import (
+	"fmt"
 	"text/template"
 
 	"github.com/tdhite/kwite/pkg/funcs"
@@ -26,6 +27,9 @@ import (
 
 // log is for logging in this package.
 var kwitelog = logf.Log.WithName("kwite-resource")
+
+// valid Publish options
+var PublishOptions = []string{"Ingress", "LoadBalancer"}
 
 func (r *Kwite) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -59,10 +63,6 @@ func (r *Kwite) Default() {
 
 	if r.Spec.MinReplicas <= 0 {
 		r.Spec.MinReplicas = 0
-	}
-
-	if r.Spec.Public == nil {
-		r.Spec.Public = new(bool)
 	}
 
 	if r.Spec.Memory == "" {
@@ -153,6 +153,10 @@ func (r *Kwite) validateKwiteSpec(allErrs field.ErrorList) field.ErrorList {
 
 	fldPath := field.NewPath("spec")
 
+	if fe := r.validateStringOptions(fldPath, "Publish", PublishOptions, r.Spec.Publish); fe != nil {
+		allErrs = append(allErrs, fe)
+	}
+
 	if fe := r.validateQuantity(fldPath, "CPU", r.Spec.CPU); fe != nil {
 		allErrs = append(allErrs, fe)
 	}
@@ -177,7 +181,18 @@ func (r *Kwite) validateKwiteSpec(allErrs field.ErrorList) field.ErrorList {
 }
 
 // Validate that the quantity conforms to the rules on Kubernetes quantities.
-func (r *Kwite) validateQuantity(fldPath *field.Path, name, value interface{}) *field.Error {
+func (r *Kwite) validateStringOptions(fldPath *field.Path, name string, options []string, value interface{}) *field.Error {
+	for _, s := range options {
+		if value.(string) != s {
+			msg := fmt.Sprintf("Invalid option %s specified for %s.", s, value.(string))
+			return field.Invalid(fldPath, value, msg)
+		}
+	}
+	return nil
+}
+
+// Validate that the quantity conforms to the rules on Kubernetes quantities.
+func (r *Kwite) validateQuantity(fldPath *field.Path, name string, value interface{}) *field.Error {
 	if _, err := resource.ParseQuantity(value.(string)); err != nil {
 		return field.Invalid(fldPath, value, err.Error())
 	}

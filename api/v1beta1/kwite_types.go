@@ -30,9 +30,11 @@ type KwiteSpec struct {
 	// The URL to handle in the kwite instances, default "/"
 	Url string `json:"url"`
 
-	// Whether the url is public (i.e., needs an ingress), default false
+	// +kubebuilder:validation:MinLength=0
+
+	// Publish the kwite via Ingress or LoadBalancer, default empty
 	// +optional
-	Public *bool `json:"public,omitempty"`
+	Publish string `json:"public,omitempty"`
 
 	// container image to use for the http(s) server, default is kwite:latest
 	// +optional
