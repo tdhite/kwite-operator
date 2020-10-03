@@ -32,9 +32,9 @@ type KwiteSpec struct {
 
 	// +kubebuilder:validation:MinLength=0
 
-	// Publish the kwite via Ingress or LoadBalancer, default empty
+	// Publish the kwite via Ingress or LoadBalancer, default ClusterIP
 	// +optional
-	Publish string `json:"public,omitempty"`
+	Publish string `json:"publish,omitempty"`
 
 	// container image to use for the http(s) server, default is kwite:latest
 	// +optional

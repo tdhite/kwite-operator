@@ -75,10 +75,11 @@ spec:
             port:
               description: port on which to expose the Url, default is 8080
               type: integer
-            public:
-              description: Whether the url is public (i.e., needs an ingress), default
-                false
-              type: boolean
+            publish:
+              description: Publish the kwite via Ingress or LoadBalancer, default
+                ClusterIP
+              minLength: 0
+              type: string
             ready:
               description: The template to execute for the readiness probes
               minLength: 0

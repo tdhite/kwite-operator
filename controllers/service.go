@@ -26,7 +26,7 @@ import (
 // Reconcile the Horizontal Pod Autoscaler cluster state.
 func (r *KwiteReconciler) getService(req ctrl.Request) (*corev1.Service, error) {
 	var sType corev1.ServiceType
-	if r.kwite.Spec.Publish != "LoadBalancer" {
+	if r.kwite.Spec.Publish != "Ingress" {
 		sType = corev1.ServiceType(r.kwite.Spec.Publish)
 	} else {
 		sType = "ClusterIP"
@@ -126,7 +126,7 @@ func (r *KwiteReconciler) updateServiceStatus(ctx context.Context, req ctrl.Requ
 			r.kwite.Status.Address = newAddr
 			doUpdate = true
 		} else {
-			r.reconcileLog.Info("No Srvice address change, updates to Kwite rewrite rules unnecessary for " + req.NamespacedName.String())
+			r.reconcileLog.Info("No Service address change, updates to Kwite rewrite rules unnecessary for " + req.NamespacedName.String())
 		}
 	}
 

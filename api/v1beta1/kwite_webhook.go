@@ -29,7 +29,7 @@ import (
 var kwitelog = logf.Log.WithName("kwite-resource")
 
 // valid Publish options
-var PublishOptions = []string{"Ingress", "LoadBalancer"}
+var publishOptions = []string{"ClusterIP", "Ingress", "LoadBalancer"}
 
 func (r *Kwite) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -44,6 +44,10 @@ var _ webhook.Defaulter = &Kwite{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *Kwite) Default() {
 	kwitelog.Info("default", "name", r.Name)
+
+	if r.Spec.Publish == "" {
+		r.Spec.Publish = publishOptions[0]
+	}
 
 	if r.Spec.Url == "" {
 		r.Spec.Url = "/"
@@ -91,6 +95,7 @@ func (r *Kwite) Default() {
 			ReadOnlyRootFilesystem:   &readOnly,
 			AllowPrivilegeEscalation: &allowEscalate,
 			RunAsUser:                &user,
+			RunAsGroup:               &user,
 		}
 	}
 }
@@ -153,7 +158,7 @@ func (r *Kwite) validateKwiteSpec(allErrs field.ErrorList) field.ErrorList {
 
 	fldPath := field.NewPath("spec")
 
-	if fe := r.validateStringOptions(fldPath, "Publish", PublishOptions, r.Spec.Publish); fe != nil {
+	if fe := r.validateStringOptions(fldPath, "Publish", publishOptions, r.Spec.Publish); fe != nil {
 		allErrs = append(allErrs, fe)
 	}
 
@@ -183,12 +188,12 @@ func (r *Kwite) validateKwiteSpec(allErrs field.ErrorList) field.ErrorList {
 // Validate that the quantity conforms to the rules on Kubernetes quantities.
 func (r *Kwite) validateStringOptions(fldPath *field.Path, name string, options []string, value interface{}) *field.Error {
 	for _, s := range options {
-		if value.(string) != s {
-			msg := fmt.Sprintf("Invalid option %s specified for %s.", s, value.(string))
-			return field.Invalid(fldPath, value, msg)
+		if value.(string) == s {
+			return nil
 		}
 	}
-	return nil
+	msg := fmt.Sprintf("Invalid option %s specified for %s.", value.(string), fldPath.String())
+	return field.Invalid(fldPath, value, msg)
 }
 
 // Validate that the quantity conforms to the rules on Kubernetes quantities.
