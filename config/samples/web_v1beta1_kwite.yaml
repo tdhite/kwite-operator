@@ -77,7 +77,7 @@ spec:
 
     <br/>{{ $s1 := "aaa" -}} {{- $s2 := "bbb" -}} {{- $comp := strCompare $s1 $s2 -}}
     <br/>{{ $s1 }} is {{ if lt $comp 0 -}} less {{ else -}} greater {{ end -}} than {{ $s2 }}.
-    <br/>{{ $s2 }} is {{ if gt $comp 0 -}} greater {{ else -}} less {{ end -}} than {{ $s1 }}.
+    <br/>{{ $s2 }} is {{ if gt $comp 0 -}} less {{ else -}} greater {{ end -}} than {{ $s1 }}.
     <br/>
     </p>
 
